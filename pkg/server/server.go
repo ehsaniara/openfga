@@ -650,6 +650,7 @@ func WithMaxChecksPerBatchCheck(maxChecks uint32) OpenFGAServiceV1Option {
 // You must call Close on it after you are done using it.
 func NewServerWithOpts(opts ...OpenFGAServiceV1Option) (*Server, error) {
 	s := &Server{
+		ctx:                              context.Background(),
 		logger:                           logger.NewNoopLogger(),
 		encoder:                          encoder.NewBase64Encoder(),
 		transport:                        gateway.NewNoopTransport(),
@@ -704,6 +705,11 @@ func NewServerWithOpts(opts ...OpenFGAServiceV1Option) (*Server, error) {
 		return nil, fmt.Errorf("a datastore option must be provided")
 	}
 
+	// ctx can be nil despite the default above if WithContext() was called
+	if s.ctx == nil {
+		return nil, fmt.Errorf("server cannot be started with nil context")
+	}
+
 	if len(s.requestDurationByQueryHistogramBuckets) == 0 {
 		return nil, fmt.Errorf("request duration datastore count buckets must not be empty")
 	}
@@ -754,7 +760,7 @@ func NewServerWithOpts(opts ...OpenFGAServiceV1Option) (*Server, error) {
 		return nil, err
 	}
 
-	s.sharedCheckResources, err = shared.NewSharedCheckResources(s.ctx, s.singleflightGroup, s.datastore, s.cacheSettings)
+	s.sharedCheckResources, err = shared.NewSharedCheckResources(s.ctx, s.singleflightGroup, s.datastore, s.cacheSettings, []shared.SharedCheckResourcesOpt{shared.WithLogger(s.logger)}...)
 	if err != nil {
 		return nil, err
 	}

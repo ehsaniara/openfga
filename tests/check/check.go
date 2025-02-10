@@ -1084,6 +1084,7 @@ type directs-user
     define computed_computed: computed
     define computed_computed_computed: computed_computed
     define or_computed: computed or computed_cond or direct_wild
+    define or_computed_no_cond: computed or direct_wild
     define and_computed: computed_cond and computed_wild
     define butnot_computed: computed_wild_cond but not computed_computed
     define butnot_computed_cond: computed_cond but not computed_computed
@@ -1119,6 +1120,7 @@ type usersets-user
     define userset_cond_to_computed_wild: [directs-user#computed_wild with xcond]
     define userset_cond_to_computed_wild_cond: [directs-user#computed_wild_cond with xcond]
     define userset_to_or_computed: [directs-user#or_computed]
+    define userset_to_or_computed_no_cond: [directs-user#or_computed_no_cond]
     define userset_to_butnot_computed: [directs-user#butnot_computed]
     define userset_to_and_computed:[directs-user#and_computed]
     define userset_recursive: [user, usersets-user#userset_recursive]
@@ -1205,7 +1207,7 @@ condition xcond(x: string) {
 		stages = append(stages, complexityFourTestingModelTest...)
 		stages = append(stages, usersetCompleteTestingModelTest...)
 		for _, stage := range stages {
-			t.Run(fmt.Sprintf("stage_%s", stage.Name), func(t *testing.T) {
+			t.Run("stage_"+stage.Name, func(t *testing.T) {
 				resp, err := client.CreateStore(ctx, &openfgav1.CreateStoreRequest{Name: name})
 				require.NoError(t, err)
 				storeID := resp.GetId()
@@ -1240,13 +1242,13 @@ condition xcond(x: string) {
 					t.Skipf("no check assertions defined")
 				}
 				for _, assertion := range stage.CheckAssertions {
-					t.Run(fmt.Sprintf("assertion_check_%s", assertion.Name), func(t *testing.T) {
+					t.Run("assertion_check_"+assertion.Name, func(t *testing.T) {
 						assertCheck(ctx, t, assertion, stage, client, storeID, modelID)
 					})
-					t.Run(fmt.Sprintf("assertion_list_objects_%s", assertion.Name), func(t *testing.T) {
+					t.Run("assertion_list_objects_"+assertion.Name, func(t *testing.T) {
 						assertListObjects(ctx, t, assertion, stage, client, storeID, modelID)
 					})
-					t.Run(fmt.Sprintf("assertion_list_users_%s", assertion.Name), func(t *testing.T) {
+					t.Run("assertion_list_users_"+assertion.Name, func(t *testing.T) {
 						assertListUsers(ctx, t, assertion, client, storeID, modelID)
 					})
 				}

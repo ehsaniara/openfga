@@ -2,10 +2,11 @@ package commands
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
+	"github.com/cespare/xxhash/v2"
 	"go.uber.org/zap"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
@@ -114,7 +115,7 @@ func NewBatchCheckCommand(datastore storage.RelationshipTupleReader, checkResolv
 func (bq *BatchCheckQuery) Execute(ctx context.Context, params *BatchCheckCommandParams) (map[CorrelationID]*BatchCheckOutcome, *BatchCheckMetadata, error) {
 	if len(params.Checks) > int(bq.maxChecksAllowed) {
 		return nil, nil, &BatchCheckValidationError{
-			Message: fmt.Sprintf("batchCheck received %d checks, the maximum allowed is %d ", len(params.Checks), bq.maxChecksAllowed),
+			Message: "batchCheck received " + strconv.Itoa(len(params.Checks)) + " checks, the maximum allowed is " + strconv.Itoa(int(bq.maxChecksAllowed)),
 		}
 	}
 
@@ -220,14 +221,14 @@ func validateCorrelationIDs(checks []*openfgav1.BatchCheckItem) error {
 	for _, check := range checks {
 		if check.GetCorrelationId() == "" {
 			return &BatchCheckValidationError{
-				Message: fmt.Sprintf("received empty correlation id for tuple: %s", check.GetTupleKey()),
+				Message: "received empty correlation id for tuple: " + check.GetTupleKey().String(),
 			}
 		}
 
 		_, ok := seen[check.GetCorrelationId()]
 		if ok {
 			return &BatchCheckValidationError{
-				Message: fmt.Sprintf("received duplicate correlation id: %s", check.GetCorrelationId()),
+				Message: "received duplicate correlation id: " + check.GetCorrelationId(),
 			}
 		}
 
@@ -251,10 +252,12 @@ func generateCacheKeyFromCheck(check *openfgav1.BatchCheckItem, storeID string, 
 		Context:          check.GetContext(),
 	}
 
-	cacheKey, err := storage.GetCheckCacheKey(cacheKeyParams)
+	hasher := xxhash.New()
+	err := storage.WriteCheckCacheKey(hasher, cacheKeyParams)
 	if err != nil {
 		return "", err
 	}
 
-	return CacheKey(cacheKey), nil
+	keyStr := strconv.FormatUint(hasher.Sum64(), 10)
+	return CacheKey(keyStr), nil
 }

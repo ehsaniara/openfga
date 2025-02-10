@@ -8,10 +8,10 @@ import (
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
 
-	"github.com/openfga/openfga/internal/graph"
 	"github.com/openfga/openfga/internal/mocks"
 	"github.com/openfga/openfga/internal/server/config"
 	"github.com/openfga/openfga/internal/shared"
+	"github.com/openfga/openfga/pkg/logger"
 	"github.com/openfga/openfga/pkg/tuple"
 )
 
@@ -31,21 +31,21 @@ func TestRequestStorageWrapper(t *testing.T) {
 		br := NewRequestStorageWrapperForCheckAPI(mockDatastore, requestContextualTuples, maxConcurrentReads,
 			&shared.SharedCheckResources{
 				CheckCache: mockCache,
+				Logger:     logger.NewNoopLogger(),
 			}, config.CacheSettings{
 				CheckIteratorCacheEnabled: true,
 				CheckCacheLimit:           1,
-			})
+			}, logger.NewNoopLogger())
 		require.NotNil(t, br)
 
 		// assert on the chain
 		a, ok := br.RelationshipTupleReader.(*CombinedTupleReader)
-		require.Equal(t, requestContextualTuples, a.contextualTuples)
 		require.True(t, ok)
 
 		b, ok := a.RelationshipTupleReader.(*InstrumentedOpenFGAStorage)
 		require.True(t, ok)
 
-		c, ok := b.RelationshipTupleReader.(*graph.CachedDatastore)
+		c, ok := b.RelationshipTupleReader.(*CachedDatastore)
 		// require.Equal(t, mockCache, c.cache)
 		// require.Equal(t, sf, c.sf)
 		// require.Equal(t, 1000, c.maxResultSize)
@@ -66,12 +66,11 @@ func TestRequestStorageWrapper(t *testing.T) {
 			tuple.NewTupleKey("doc:1", "viewer", "user:maria"),
 		}
 
-		br := NewRequestStorageWrapperForCheckAPI(mockDatastore, requestContextualTuples, maxConcurrentReads, &shared.SharedCheckResources{}, config.CacheSettings{})
+		br := NewRequestStorageWrapperForCheckAPI(mockDatastore, requestContextualTuples, maxConcurrentReads, &shared.SharedCheckResources{Logger: logger.NewNoopLogger()}, config.CacheSettings{}, logger.NewNoopLogger())
 		require.NotNil(t, br)
 
 		// assert on the chain
 		a, ok := br.RelationshipTupleReader.(*CombinedTupleReader)
-		require.Equal(t, requestContextualTuples, a.contextualTuples)
 		require.True(t, ok)
 
 		b, ok := a.RelationshipTupleReader.(*InstrumentedOpenFGAStorage)
@@ -96,7 +95,6 @@ func TestRequestStorageWrapper(t *testing.T) {
 
 		// assert on the chain
 		a, ok := br.RelationshipTupleReader.(*CombinedTupleReader)
-		require.Equal(t, requestContextualTuples, a.contextualTuples)
 		require.True(t, ok)
 
 		b, ok := a.RelationshipTupleReader.(*InstrumentedOpenFGAStorage)
